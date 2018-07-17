@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Views.MainActivity">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:weightSum="1">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/textView2"
+            android:background="@color/colorBackground" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:weightSum="1"
+            android:background="@color/colorBackground">
+
+            <Space
+                android:layout_width="20px"
+                android:layout_height="match_parent"
+                android:layout_weight="0.05" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="GeoX:"
+                android:id="@+id/geoX"
+                android:textSize="15dp"
+                android:layout_weight="0.3"
+                android:textStyle="italic" />
+
+            <Space
+                android:layout_width="20px"
+                android:layout_height="match_parent"
+                android:layout_weight="0.05" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="GeoY:"
+                android:id="@+id/geoY"
+                android:textSize="15dp"
+                android:layout_weight="0.3"
+                android:textStyle="italic" />
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_weight="0.05" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="GeoZ:"
+                android:id="@+id/geoZ"
+                android:textSize="15dp"
+                android:layout_weight="0.3"
+                android:textStyle="italic" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorBackground"
+            android:layout_weight="0.5">
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="match_parent" />
+
+            <ListView
+                android:layout_width="220dp"
+                android:layout_height="216dp"
+                android:id="@+id/list_view">
+            </ListView>
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Space
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:text="Total"
+                    android:id="@+id/textView7"
+                    android:layout_gravity="center" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:text="0"
+                    android:id="@+id/wifi_total_aps"
+                    android:layout_gravity="center"
+                    android:textSize="50dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:text="APs"
+                    android:id="@+id/textView"
+                    android:layout_gravity="center" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="15dp"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/textView3"
+            android:background="@color/colorBackground" />
+
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/white">
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/input_building"
+                    android:layout_weight="0.3"
+                    android:hint="Building: EE/IR"
+                    android:singleLine="true"/>
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/input_floor"
+                    android:layout_weight="0.3"
+                    android:hint="Floor: 1/2/3"
+                    android:singleLine="true" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/white">
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/input_loc_x"
+                    android:layout_weight="0.3"
+                    android:hint="LocationX: x.x dm"
+                    android:singleLine="true"
+                    android:layout_gravity="left" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/input_loc_y"
+                    android:layout_weight="0.3"
+                    android:hint="Location: y.y dm"
+                    android:singleLine="true"
+                    android:layout_gravity="right" />
+            </TableRow>
+
+            <TableRow android:background="@android:color/white">
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="GEO_SCAN"
+                android:id="@+id/button_geo_start"
+                android:layout_weight="0.5"
+                android:background="@drawable/buttonstyle" />
+
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="GEO_STOP"
+                android:id="@+id/button_geo_stop"
+                android:layout_weight="0.5"
+                android:background="@drawable/buttonstyle2" />
+            </TableRow>
+
+            <TableRow android:weightSum="1">
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:text="WIFI_SCAN"
+                    android:id="@+id/button_wifi_start"
+                    android:layout_weight="0.5"
+                    android:background="@drawable/buttonstyle"
+                    style="?android:attr/buttonStyleSmall" />
+
+                <Button
+                    android:id="@+id/button_wifi_filter"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.5"
+                    android:background="@drawable/buttonstyle2"
+                    android:text="WIFI_FILTER" />
+            </TableRow>
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="Auto_Scan"
+                android:id="@+id/button_auto_scan"
+                android:backgroundTint="@color/colorPrimary" />
+
+            <Button
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="Upload"
+            android:id="@+id/button_upload_to_server"
+            android:backgroundTint="@android:color/holo_orange_light" />
+
+        </TableLayout>
+
+    </LinearLayout>
+
+    <!--<LinearLayout-->
+        <!--android:id="@+id/bt_ly"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:gravity="center_horizontal"-->
+        <!--&gt;-->
+        <!--<Button-->
+            <!--android:id="@+id/linechart_bt"-->
+            <!--style="?android:attr/buttonStyleSmall"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_weight="1"-->
+            <!--android:text="折线图" />-->
+
+        <!--<Button-->
+            <!--android:id="@+id/barchart_bt"-->
+            <!--style="?android:attr/buttonStyleSmall"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_weight="1"-->
+            <!--android:text="柱状图" />-->
+
+        <!--<Button-->
+            <!--android:id="@+id/piechart_bt"-->
+            <!--style="?android:attr/buttonStyleSmall"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_weight="1"-->
+            <!--android:text="饼状图" />-->
+    <!--</LinearLayout>-->
+
+    <!--<WebView-->
+        <!--android:id="@+id/chartshow_wb"-->
+        <!--android:layout_below="@id/bt_ly"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--/>-->
+</RelativeLayout>
