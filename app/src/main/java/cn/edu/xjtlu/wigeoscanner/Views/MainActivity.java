@@ -12,6 +12,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
+import android.opengl.Matrix;
+import android.renderscript.Matrix3f;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -31,6 +33,7 @@ import cn.edu.xjtlu.wigeoscanner.Modules.DataUploader;
 import cn.edu.xjtlu.wigeoscanner.Modules.GeoItem;
 import cn.edu.xjtlu.wigeoscanner.Modules.WiFiItem;
 import cn.edu.xjtlu.wigeoscanner.Modules.WiFiItemAdapter;
+import cn.edu.xjtlu.wigeoscanner.Modules.MathMethod;
 import cn.edu.xjtlu.wigeoscanner.R;
 /**
  * Created by jBta0 on 2018/7/12.
@@ -65,10 +68,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean ENABLE_ALLOW_SSID = false;
     private boolean WIFI_FIRST_SCAN = false;
 
+    //added
+    private final float[] mAccelerometerReading = new float[3];
+    private final float[] mMagnetometerReading = new float[3];
+
+    private final float[] mRotationMatrix = new float[9];
+    private final float[] mOrientationAngles = new float[3];
+    private final double[] mFinalOrientationAngles = new double[3];
+
+    private float[][] MagRot = new float[1][3];
+    //
+
+    MathMethod mathMethod = new MathMethod();
     private WifiManager mWifi;
     private List<ScanResult> wifiList;
 
     private boolean GEO_SCAN_ENABLE = false;
+    //private boolean ACC_SCAN_ENABLE = true;
 
     private static final int PERMISSION_REQUEST_CODE = 0;
     private static final String[] NEEDED_PERMISSIONS = new String[]{
@@ -77,19 +93,42 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     };
     private boolean mHasPermission;
 
+    private Sensor mSensorGeo;
+    private Sensor mSensorACC;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initPermission();
         initWiFi();
+        initACC();
         initWifiAllowList();
         initGeoSensor();
         setListAdapter();
         initView();
         initDataParas();
-
     }
+    //added
+    public void setRotMatrix(){
+        float sinX = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[0])));
+        float cosX = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[0])));
+        float sinY = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[1])));
+        float cosY = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[1])));
+        float sinZ = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[2])));
+        float cosZ = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[2])));
+
+        float[][] mRotationX = {{cosX, -sinX, 0},{sinX, cosX, 0}, {0, 0, 1}};
+        float[][] mRotationY = {{1, 0, 0}, {0, cosY,-sinY}, {0, sinY, cosY}};
+        float[][] mRotationZ = {{cosZ, 0, -sinZ},{0, 1, 0}, {sinZ, 0, cosZ}};
+
+        float[][] mRotation = mathMethod.multip3x(mathMethod.multip3x(mRotationY,mRotationX),mRotationZ);
+        float[][] ReverseMatrix = mathMethod.getReverseMartrix(mRotation);
+        float[][] InitMag = {{mMagnetometerReading[0]},{mMagnetometerReading[1]},{mMagnetometerReading[2]}};
+        MagRot = mathMethod.multip3x(ReverseMatrix, InitMag);
+    }
+    //end
+
     private void initDataParas(){
         dataparas = new DataParas("","","","");
     }
@@ -177,9 +216,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
     private void initGeoSensor(){
         mSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
-        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        mSensorGeo = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         geoitem = new GeoItem("","","");
     }
+
+    //
+    private void initACC(){
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mSensorACC = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        //mSensorACC = mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
+    }
+
     private void setListAdapter(){
         adapter = new WiFiItemAdapter(MainActivity.this, R.layout.wifi_item, wifiItemlist);
         ListView listView = (ListView) findViewById(R.id.list_view);
@@ -271,8 +318,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
     @Override
     protected void onResume() {
+        // Get updates from the accelerometer and magnetometer at a constant rate.
+        // To make batch operations more efficient and reduce power consumption,
+        // provide support for delaying updates to the application.
+        //
+        // In this example, the sensor reporting delay is small enough such that
+        // the application receives an update before the system checks the sensor
+        // readings again.
+
+        //SENSOR_DELAY_GAME : 38Hz
+        //SENSOR_DELAY_NORMAL: 38Hz
+        //SENSOR_DELAY_UI : 15Hz
+        //SENSOR_DELAY_FASTEST : 4Hz
         super.onResume();
-        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+
+        //Edited mSensor to mSensorGeo/ACC
+        mSensorManager.registerListener(this, mSensorACC, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mSensorGeo, SensorManager.SENSOR_DELAY_NORMAL);
         this.registerReceiver(new BroadcastReceiver(){
             @Override
             public void onReceive(Context c, Intent intent)
@@ -282,6 +344,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
     }
 
+    //暂停后停止地磁和加速度计register，减少电池损耗
     @Override
     protected void onPause() {
         super.onPause();
@@ -303,10 +366,62 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             geoitem.setStore_geo_y(geoY);
             geoitem.setStore_geo_z(geoZ);
 
-            tv_geoX.setText("GeoX:"+geoitem.getStore_geo_x());
-            tv_geoY.setText("GeoY:"+geoitem.getStore_geo_y());
-            tv_geoZ.setText("GeoZ:"+geoitem.getStore_geo_z());
+
+            //获取raw地磁数据
+            //tv_geoX.setText("GeoX:"+mMagnetometerReading[0]);
+            //tv_geoY.setText("GeoY:"+mMagnetometerReading[1]);
+            //tv_geoZ.setText("GeoZ:"+mMagnetometerReading[2]);
+            //获取raw加速度计数据
+            //tv_geoX.setText("GeoX:"+ mAccelerometerReading[0]);
+            //tv_geoY.setText("GeoY:"+ mAccelerometerReading[1]);
+            //tv_geoZ.setText("GeoZ:"+ mAccelerometerReading[2]);
+            //获取raw角度数据
+            double value = 180 / Math.PI;
+            mFinalOrientationAngles[0] = value * mOrientationAngles[0];
+            mFinalOrientationAngles[1] = value * mOrientationAngles[1];
+            mFinalOrientationAngles[2] = value * mOrientationAngles[2];
+
+            setRotMatrix();
+
+            String resultX = String.format("%8.4f",MagRot[0][0]);
+            String resultY = String.format("%8.4f",MagRot[1][0]);
+            String resultZ = String.format("%8.4f",MagRot[2][0]);
+            tv_geoX.setText("GeoX:"+ resultX);
+            tv_geoY.setText("GeoY:"+ resultY);
+            tv_geoZ.setText("GeoZ:"+ resultZ);
+
+            //private final float[] mRotationMatrix = new float[9];
+            //private final float[] mOrientationAngles = new float[3];
+
+            //tv_geoX.setText("GeoX:"+geoitem.getStore_geo_x());
+            //tv_geoY.setText("GeoY:"+geoitem.getStore_geo_y());
+            //tv_geoZ.setText("GeoZ:"+geoitem.getStore_geo_z());
         }
+
+        //added
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(event.values, 0, mAccelerometerReading,
+                    0, mAccelerometerReading.length);
+        }
+        else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(event.values, 0, mMagnetometerReading,
+                    0, mMagnetometerReading.length);
+        }
+        updateOrientationAngles();
+    }
+
+    // Compute the three orientation angles based on the most recent readings from
+    // the device's accelerometer and magnetometer.
+    public void updateOrientationAngles() {
+        // Update rotation matrix, which is needed to update orientation angles.
+        mSensorManager.getRotationMatrix(mRotationMatrix, null,
+                mAccelerometerReading, mMagnetometerReading);
+
+        // "mRotationMatrix" now has up-to-date information.
+
+        mSensorManager.getOrientation(mRotationMatrix, mOrientationAngles);
+
+        // "mOrientationAngles" now has up-to-date information.
     }
 
     @Override
@@ -342,5 +457,4 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         global_wifiItemlist = wifiItemlist;
     }
-
 }
