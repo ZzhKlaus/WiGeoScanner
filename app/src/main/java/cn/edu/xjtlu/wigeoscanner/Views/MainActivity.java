@@ -24,6 +24,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.opengl.Matrix;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,14 +70,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean WIFI_FIRST_SCAN = false;
 
     //added
-    private final float[] mAccelerometerReading = new float[3];
+    //private final float[] mAccelerometerReading = new float[3];
     private final float[] mMagnetometerReading = new float[3];
+    private final float[] mGravmeterReading = new float[3];
 
     private final float[] mRotationMatrix = new float[9];
     private final float[] mOrientationAngles = new float[3];
     private final double[] mFinalOrientationAngles = new double[3];
 
     private float[][] MagRot = new float[1][3];
+    private float[][] MagRotNew = new float[3][1];
+    //private float[] MagRot = new float[3];
+    float azimuth;
+    float pitch;
+    float roll;
+    private static final int TEST_GRAV = Sensor.TYPE_ACCELEROMETER;
+    private static final int TEST_MAG = Sensor.TYPE_MAGNETIC_FIELD;
+    private final float alpha = (float) 0.8;
+    private float gravity[] = new float[3];
+    private float magnetic[] = new float[3];
     //
 
     MathMethod mathMethod = new MathMethod();
@@ -94,40 +106,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean mHasPermission;
 
     private Sensor mSensorGeo;
-    private Sensor mSensorACC;
-
+    //private Sensor mSensorACC;
+    private Sensor mSensorGrav;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initPermission();
         initWiFi();
-        initACC();
+        //initACC();
+        initGrav();
         initWifiAllowList();
         initGeoSensor();
         setListAdapter();
         initView();
         initDataParas();
     }
-    //added
-    public void setRotMatrix(){
-        float sinX = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[0])));
-        float cosX = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[0])));
-        float sinY = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[1])));
-        float cosY = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[1])));
-        float sinZ = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[2])));
-        float cosZ = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[2])));
-
-        float[][] mRotationX = {{cosX, -sinX, 0},{sinX, cosX, 0}, {0, 0, 1}};
-        float[][] mRotationY = {{1, 0, 0}, {0, cosY,-sinY}, {0, sinY, cosY}};
-        float[][] mRotationZ = {{cosZ, 0, -sinZ},{0, 1, 0}, {sinZ, 0, cosZ}};
-
-        float[][] mRotation = mathMethod.multip3x(mathMethod.multip3x(mRotationY,mRotationX),mRotationZ);
-        float[][] ReverseMatrix = mathMethod.getReverseMartrix(mRotation);
-        float[][] InitMag = {{mMagnetometerReading[0]},{mMagnetometerReading[1]},{mMagnetometerReading[2]}};
-        MagRot = mathMethod.multip3x(ReverseMatrix, InitMag);
-    }
-    //end
 
     private void initDataParas(){
         dataparas = new DataParas("","","","");
@@ -217,16 +211,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void initGeoSensor(){
         mSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         mSensorGeo = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        geoitem = new GeoItem("","","");
+        //geoitem = new GeoItem("","","");
     }
 
     //
-    private void initACC(){
+    /*private void initACC(){
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mSensorACC = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         //mSensorACC = mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
-    }
+    }*/
 
+    private void initGrav(){
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mSensorGrav = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+    }
     private void setListAdapter(){
         adapter = new WiFiItemAdapter(MainActivity.this, R.layout.wifi_item, wifiItemlist);
         ListView listView = (ListView) findViewById(R.id.list_view);
@@ -333,8 +331,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onResume();
 
         //Edited mSensor to mSensorGeo/ACC
-        mSensorManager.registerListener(this, mSensorACC, SensorManager.SENSOR_DELAY_NORMAL);
+        //mSensorManager.registerListener(this, mSensorACC, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, mSensorGeo, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mSensorGrav, SensorManager.SENSOR_DELAY_NORMAL);
         this.registerReceiver(new BroadcastReceiver(){
             @Override
             public void onReceive(Context c, Intent intent)
@@ -351,76 +350,103 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mSensorManager.unregisterListener(this);
     }
 
+    //added 一种基于地磁强度特征的室内定位方法
+    public void setRotMatrix(){
+        float sinX = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[0])));
+        float cosX = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[0])));
+        float sinY = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[1])));
+        float cosY = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[1])));
+        float sinZ = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[2])));
+        float cosZ = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[2])));
+
+        float[][] mRotationZ = {{cosX, -sinX, 0},{sinX, cosX, 0}, {0, 0, 1}};
+        float[][] mRotationX = {{1, 0, 0}, {0, cosY,-sinY}, {0, sinY, cosY}};
+        float[][] mRotationY = {{cosZ, 0, -sinZ},{0, 1, 0}, {sinZ, 0, cosZ}};
+        //added
+        //float[] mInvRotMatrix = new float[9];
+        //android.opengl.Matrix.invertM(mInvRotMatrix,0,mRotationMatrix,0);
+
+        float[][] mRotation = mathMethod.multip3x(mathMethod.multip3x(mRotationY,mRotationX),mRotationZ);
+        float[][] ReverseMatrix = mathMethod.getReverseMartrix(mRotation);
+
+        float[][] InitMag = {{mMagnetometerReading[0]},{mMagnetometerReading[1]},{mMagnetometerReading[2]}};
+
+//        float[][] mRotationMatrixNew = {{mRotationMatrix[0],mRotationMatrix[1],mRotationMatrix[2]},{mRotationMatrix[3],mRotationMatrix[4],mRotationMatrix[5],},{mRotationMatrix[6],mRotationMatrix[7],mRotationMatrix[8]}};
+ //       MagRot = mathMethod.multip3x(mRotationMatrixNew, InitMag);
+        MagRot = mathMethod.multip3x(ReverseMatrix, InitMag);
+        //float[] InitMag = {mMagnetometerReading[0],mMagnetometerReading[1],mMagnetometerReading[2]};
+       // android.opengl.Matrix.multiplyMV(MagRot,0,mInvRotMatrix,0,InitMag,0);
+    }
+    //end
+
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if(GEO_SCAN_ENABLE) {
-            double x = event.values[0];
-            double y = event.values[1];
-            double z = event.values[2];
+        //added
+        if (GEO_SCAN_ENABLE) {
+            if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+                System.arraycopy(event.values, 0, mMagnetometerReading,
+                        0, mMagnetometerReading.length);
+                mathMethod.lowPass(event.values.clone(), mMagnetometerReading);
+            } else if (event.sensor.getType() == Sensor.TYPE_GRAVITY) {
+                System.arraycopy(event.values, 0, mGravmeterReading,
+                        0, mGravmeterReading.length);
+                mathMethod.lowPass(event.values.clone(), mGravmeterReading);
+            }
 
-            String geoX = String.format("%8.4f", x);
-            String geoY = String.format("%8.4f", y);
-            String geoZ = String.format("%8.4f", z);
-
-            geoitem.setStore_geo_x(geoX);
-            geoitem.setStore_geo_y(geoY);
-            geoitem.setStore_geo_z(geoZ);
-
-
-            //获取raw地磁数据
-            //tv_geoX.setText("GeoX:"+mMagnetometerReading[0]);
-            //tv_geoY.setText("GeoY:"+mMagnetometerReading[1]);
-            //tv_geoZ.setText("GeoZ:"+mMagnetometerReading[2]);
-            //获取raw加速度计数据
-            //tv_geoX.setText("GeoX:"+ mAccelerometerReading[0]);
-            //tv_geoY.setText("GeoY:"+ mAccelerometerReading[1]);
-            //tv_geoZ.setText("GeoZ:"+ mAccelerometerReading[2]);
+            if (mGravmeterReading != null && mMagnetometerReading != null) {
+                float I[] = new float[9];
+                mSensorManager.getRotationMatrix(mRotationMatrix, I,
+                        mGravmeterReading, mMagnetometerReading);
+            }
+            updateOrientationAngles();
             //获取raw角度数据
             double value = 180 / Math.PI;
-            mFinalOrientationAngles[0] = value * mOrientationAngles[0];
-            mFinalOrientationAngles[1] = value * mOrientationAngles[1];
-            mFinalOrientationAngles[2] = value * mOrientationAngles[2];
-
+            mFinalOrientationAngles[1] = value * mOrientationAngles[1] ; //pitch 角度在-180-180
+            if(mGravmeterReading[2] < 0){
+                if(mFinalOrientationAngles[1] > 0){
+                    mFinalOrientationAngles[1] = 180 - mFinalOrientationAngles[1];
+                }
+                else if(mFinalOrientationAngles[1] < 0){
+                    mFinalOrientationAngles[1] = -180 - mFinalOrientationAngles[1];
+                }
+            }
+            mFinalOrientationAngles[2] = value * -mOrientationAngles[2] / 2; //roll 角度在-90-90
+            mFinalOrientationAngles[0] = value * mOrientationAngles[0]; //azimuth 角度在0-360
+            if(mFinalOrientationAngles[0] < 0){
+                mFinalOrientationAngles[0] = 360 + mFinalOrientationAngles[0];
+            }
             setRotMatrix();
 
-            String resultX = String.format("%8.4f",MagRot[0][0]);
-            String resultY = String.format("%8.4f",MagRot[1][0]);
-            String resultZ = String.format("%8.4f",MagRot[2][0]);
+            float[][] mRotationMatrixNew = {{mRotationMatrix[0],mRotationMatrix[1],mRotationMatrix[2]},{mRotationMatrix[3],mRotationMatrix[4],mRotationMatrix[5],},{mRotationMatrix[6],mRotationMatrix[7],mRotationMatrix[8]}};
+            float[][] mReverseMatrix = mathMethod.getReverseMartrix(mRotationMatrixNew);
+            float[][] InitMag = {{mMagnetometerReading[0]},{mMagnetometerReading[1]},{mMagnetometerReading[2]}};
+            MagRotNew = mathMethod.multip3x(mReverseMatrix, InitMag);
+
+            double total = Math.sqrt(MagRotNew[0][0]*MagRotNew[0][0]+MagRotNew[1][0]*MagRotNew[1][0]+MagRotNew[2][0]*MagRotNew[2][0]);
+            String resultX = String.format("%8.3f",MagRotNew[0][0]);
+            String resultY = String.format("%8.3f",MagRotNew[1][0]);
+            String resultZ = String.format("%8.3f",MagRotNew[2][0]);
+            /*tv_geoX.setText("GeoX:"+mMagnetometerReading[0]);
+            tv_geoY.setText("GeoY:"+mMagnetometerReading[1]);
+            tv_geoZ.setText("GeoZ:"+mMagnetometerReading[2]);*/
             tv_geoX.setText("GeoX:"+ resultX);
             tv_geoY.setText("GeoY:"+ resultY);
             tv_geoZ.setText("GeoZ:"+ resultZ);
-
-            //private final float[] mRotationMatrix = new float[9];
-            //private final float[] mOrientationAngles = new float[3];
-
-            //tv_geoX.setText("GeoX:"+geoitem.getStore_geo_x());
-            //tv_geoY.setText("GeoY:"+geoitem.getStore_geo_y());
-            //tv_geoZ.setText("GeoZ:"+geoitem.getStore_geo_z());
         }
-
-        //added
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            System.arraycopy(event.values, 0, mAccelerometerReading,
-                    0, mAccelerometerReading.length);
         }
-        else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            System.arraycopy(event.values, 0, mMagnetometerReading,
-                    0, mMagnetometerReading.length);
-        }
-        updateOrientationAngles();
-    }
 
     // Compute the three orientation angles based on the most recent readings from
     // the device's accelerometer and magnetometer.
     public void updateOrientationAngles() {
         // Update rotation matrix, which is needed to update orientation angles.
-        mSensorManager.getRotationMatrix(mRotationMatrix, null,
-                mAccelerometerReading, mMagnetometerReading);
 
+        //mSensorManager.getRotationMatrix(mRotationMatrix, null,
+               // mAccelerometerReading, mMagnetometerReading);
+        float I[] = new float[9];
+        mSensorManager.getRotationMatrix(mRotationMatrix, I,
+           mGravmeterReading, mMagnetometerReading);
         // "mRotationMatrix" now has up-to-date information.
-
         mSensorManager.getOrientation(mRotationMatrix, mOrientationAngles);
-
         // "mOrientationAngles" now has up-to-date information.
     }
 

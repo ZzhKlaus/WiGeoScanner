@@ -5,6 +5,9 @@ public class MathMethod {
     /*
      * 求(h,v)坐标的位置的余子式
      */
+    //Low-Pass Filter parameter
+    static final float ALPHA = 0.25f;
+
     public float[][] getConfactor(float[][] data, int h, int v) {
         int H = data.length;
         int V = data[0].length;
@@ -113,6 +116,14 @@ public class MathMethod {
             }
         }
         return result;
+    }
+
+    public float[] lowPass( float[] input, float[] output ) {
+        if ( output == null ) return input;
+        for ( int i=0; i<input.length; i++ ) {
+            output[i] = output[i] + ALPHA * (input[i] - output[i]);
+        }
+        return output;
     }
     //end
 
