@@ -1,7 +1,5 @@
 package cn.edu.xjtlu.wigeoscanner.Modules;
 
-import android.hardware.Sensor;
-
 public class discard {
 
     /*int rotation = getWindowManager().getDefaultDisplay().getRotation();
@@ -69,9 +67,7 @@ public class discard {
     //tv_geoY.setText("GeoY:"+geoitem.getStore_geo_y());
     //tv_geoZ.setText("GeoZ:"+geoitem.getStore_geo_z());
 //输出方向角
-    /*String resultX = String.format("%8.4f",mFinalOrientationAngles[0]);
-    String resultY = String.format("%8.4f",mFinalOrientationAngles[1]);
-    String resultZ = String.format("%8.4f",mFinalOrientationAngles[2]);*/
+
 
 
     //输出的某位置的地磁特征量 精度有问题

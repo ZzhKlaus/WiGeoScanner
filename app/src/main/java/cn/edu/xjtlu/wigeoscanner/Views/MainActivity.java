@@ -12,30 +12,31 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
-import android.opengl.Matrix;
-import android.renderscript.Matrix3f;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.opengl.Matrix;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import cn.edu.xjtlu.wigeoscanner.Modules.DataParas;
 import cn.edu.xjtlu.wigeoscanner.Modules.DataUploader;
 import cn.edu.xjtlu.wigeoscanner.Modules.GeoItem;
+import cn.edu.xjtlu.wigeoscanner.Modules.MathMethod;
 import cn.edu.xjtlu.wigeoscanner.Modules.WiFiItem;
 import cn.edu.xjtlu.wigeoscanner.Modules.WiFiItemAdapter;
-import cn.edu.xjtlu.wigeoscanner.Modules.MathMethod;
 import cn.edu.xjtlu.wigeoscanner.R;
+
+//import cn.edu.xjtlu.wigeoscanner.Modules.WriteData2CSVThread;
+
 /**
  * Created by jBta0 on 2018/7/12.
  */
@@ -108,6 +109,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor mSensorGeo;
     //private Sensor mSensorACC;
     private Sensor mSensorGrav;
+
+    //File related
+    String baseDir = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+    String fileName = "AnalysisData.csv";
+    String filePath = baseDir + File.separator + fileName;
+    File f = new File(filePath);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -352,7 +360,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //added 一种基于地磁强度特征的室内定位方法
     public void setRotMatrix(){
-        float sinX = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[0])));
+        /*float sinX = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[0])));
         float cosX = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[0])));
         float sinY = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[1])));
         float cosY = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[1])));
@@ -362,18 +370,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float[][] mRotationZ = {{cosX, -sinX, 0},{sinX, cosX, 0}, {0, 0, 1}};
         float[][] mRotationX = {{1, 0, 0}, {0, cosY,-sinY}, {0, sinY, cosY}};
         float[][] mRotationY = {{cosZ, 0, -sinZ},{0, 1, 0}, {sinZ, 0, cosZ}};
+        */
+
+        float sinZ = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[0])));
+        float cosZ = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[0])));
+        float sinY = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[1])));
+        float cosY = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[1])));
+        float sinX = Float.parseFloat(String.valueOf(Math.sin(mFinalOrientationAngles[2])));
+        float cosX = Float.parseFloat(String.valueOf(Math.cos(mFinalOrientationAngles[2])));
+
+        float[][] mRotationZ = {{cosZ, -sinZ, 0},{sinZ, cosZ, 0}, {0, 0, 1}};
+        float[][] mRotationX = {{1, 0, 0}, {0, cosX,-sinX}, {0, sinX, cosX}};
+        float[][] mRotationY = {{cosY, 0, -sinY},{0, 1, 0}, {sinY, 0, cosY}};
         //added
         //float[] mInvRotMatrix = new float[9];
         //android.opengl.Matrix.invertM(mInvRotMatrix,0,mRotationMatrix,0);
 
-        float[][] mRotation = mathMethod.multip3x(mathMethod.multip3x(mRotationY,mRotationX),mRotationZ);
-        float[][] ReverseMatrix = mathMethod.getReverseMartrix(mRotation);
+        //float[][] mRotation = mathMethod.multip3x(mathMethod.multip3x(mRotationY,mRotationX),mRotationZ);
+        float[][] mRotation = mathMethod.multip3x(mathMethod.multip3x(mRotationX,mRotationY),mRotationZ);
+        //float[][] ReverseMatrix = mathMethod.getReverseMartrix(mRotation);
 
         float[][] InitMag = {{mMagnetometerReading[0]},{mMagnetometerReading[1]},{mMagnetometerReading[2]}};
 
 //        float[][] mRotationMatrixNew = {{mRotationMatrix[0],mRotationMatrix[1],mRotationMatrix[2]},{mRotationMatrix[3],mRotationMatrix[4],mRotationMatrix[5],},{mRotationMatrix[6],mRotationMatrix[7],mRotationMatrix[8]}};
  //       MagRot = mathMethod.multip3x(mRotationMatrixNew, InitMag);
-        MagRot = mathMethod.multip3x(ReverseMatrix, InitMag);
+        MagRot = mathMethod.multip3x(mRotation, InitMag);
         //float[] InitMag = {mMagnetometerReading[0],mMagnetometerReading[1],mMagnetometerReading[2]};
        // android.opengl.Matrix.multiplyMV(MagRot,0,mInvRotMatrix,0,InitMag,0);
     }
@@ -393,11 +414,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 mathMethod.lowPass(event.values.clone(), mGravmeterReading);
             }
 
-            if (mGravmeterReading != null && mMagnetometerReading != null) {
+            /*if (mGravmeterReading != null && mMagnetometerReading != null) {
                 float I[] = new float[9];
                 mSensorManager.getRotationMatrix(mRotationMatrix, I,
                         mGravmeterReading, mMagnetometerReading);
-            }
+            }*/
             updateOrientationAngles();
             //获取raw角度数据
             double value = 180 / Math.PI;
@@ -410,7 +431,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     mFinalOrientationAngles[1] = -180 - mFinalOrientationAngles[1];
                 }
             }
-            mFinalOrientationAngles[2] = value * -mOrientationAngles[2] / 2; //roll 角度在-90-90
+            mFinalOrientationAngles[2] = value * -mOrientationAngles[2] ; //roll 角度在-180-180
             mFinalOrientationAngles[0] = value * mOrientationAngles[0]; //azimuth 角度在0-360
             if(mFinalOrientationAngles[0] < 0){
                 mFinalOrientationAngles[0] = 360 + mFinalOrientationAngles[0];
@@ -418,20 +439,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             setRotMatrix();
 
             float[][] mRotationMatrixNew = {{mRotationMatrix[0],mRotationMatrix[1],mRotationMatrix[2]},{mRotationMatrix[3],mRotationMatrix[4],mRotationMatrix[5],},{mRotationMatrix[6],mRotationMatrix[7],mRotationMatrix[8]}};
-            float[][] mReverseMatrix = mathMethod.getReverseMartrix(mRotationMatrixNew);
+            //float[][] mReverseMatrix = mathMethod.getReverseMartrix(mRotationMatrixNew);
             float[][] InitMag = {{mMagnetometerReading[0]},{mMagnetometerReading[1]},{mMagnetometerReading[2]}};
-            MagRotNew = mathMethod.multip3x(mReverseMatrix, InitMag);
+            MagRotNew = mathMethod.multip3x(mRotationMatrixNew, InitMag);
 
             double total = Math.sqrt(MagRotNew[0][0]*MagRotNew[0][0]+MagRotNew[1][0]*MagRotNew[1][0]+MagRotNew[2][0]*MagRotNew[2][0]);
-            String resultX = String.format("%8.3f",MagRotNew[0][0]);
+
+
+            /*String resultX = String.format("%8.4f",mFinalOrientationAngles[0]);
+    String resultY = String.format("%8.4f",mFinalOrientationAngles[1]);
+    String resultZ = String.format("%8.4f",mFinalOrientationAngles[2]);*/
+            /*String resultX = String.format("%8.3f",MagRotNew[0][0]);
             String resultY = String.format("%8.3f",MagRotNew[1][0]);
-            String resultZ = String.format("%8.3f",MagRotNew[2][0]);
+            String resultZ = String.format("%8.3f",MagRotNew[2][0]);*/
             /*tv_geoX.setText("GeoX:"+mMagnetometerReading[0]);
             tv_geoY.setText("GeoY:"+mMagnetometerReading[1]);
             tv_geoZ.setText("GeoZ:"+mMagnetometerReading[2]);*/
-            tv_geoX.setText("GeoX:"+ resultX);
+
+            /*String resultX = String.format("%8.4f",MagRot[0][0]);
+            String resultY = String.format("%8.4f",MagRot[1][0]);
+            String resultZ = String.format("%8.4f",MagRot[2][0]);*/
+
+            tv_geoX.setText("GeoX:"+ mGravmeterReading[0]);
+            tv_geoY.setText("GeoY:"+ mGravmeterReading[1]);
+            tv_geoZ.setText("GeoZ:"+ mGravmeterReading[2]);
+            /*tv_geoX.setText("GeoX:"+ resultX);
             tv_geoY.setText("GeoY:"+ resultY);
-            tv_geoZ.setText("GeoZ:"+ resultZ);
+            tv_geoZ.setText("GeoZ:"+ resultZ);*/
         }
         }
 
